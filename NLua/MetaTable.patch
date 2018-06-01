@@ -1,0 +1,25 @@
+diff --git a/Core/NLua/Metatables.cs b/Core/NLua/Metatables.cs
+index 6bdfda3..6806698 100755
+--- a/Core/NLua/Metatables.cs
++++ b/Core/NLua/Metatables.cs
+@@ -1257,13 +1257,18 @@ namespace NLua
+ 			var argTypes = new List<MethodArgs> ();
+ 			foreach (var currentNetParam in paramInfo) {
++                if (currentNetParam.ParameterType == typeof(ObjectTranslator))
++                {
++                    paramList.Add(this.translator);
++                    continue;
++                }
+ #if !SILVERLIGHT
+-				if (!currentNetParam.IsIn && currentNetParam.IsOut)  // Skips out params 
++                if (!currentNetParam.IsIn && currentNetParam.IsOut)  // Skips out params 
+ #else
+ 				if (currentNetParam.IsOut)  // Skips out params
+ #endif
+-				{					
+-					paramList.Add (null);
++                {
++                    paramList.Add (null);
+ 					outList.Add (paramList.LastIndexOf (null));
+ 				}  else if (IsTypeCorrect (luaState, currentLuaParam, currentNetParam, out extractValue)) {  // Type checking
+ 					var value = extractValue (luaState, currentLuaParam);
