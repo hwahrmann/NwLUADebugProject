@@ -1,16 +1,38 @@
-﻿using System;
+﻿#region Copyright (C) 2018 Helmut Wahrmann
+
+/* 
+ *  Copyright (C) 2018 Helmut Wahrmann
+ *  https://github.com/hwahrmann/NwLUADebugProject
+ *
+ *  This Program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 3, or (at your option)
+ *  any later version.
+ *   
+ *  This Program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *   
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#endregion
+
+using System;
 using System.Collections.Generic;
-using System.Collections;
 using System.Linq;
 using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NLog;
 using NLua;
 
 namespace NwLuaDebugHelper
 {
+    /// <summary>
+    /// The main class, which interacts with the Lua Interpreter. It has implementation of most of the nw-api functions.
+    /// </summary>
     public class NwLuaDebugHelper
     {
         #region Variables
@@ -37,6 +59,11 @@ namespace NwLuaDebugHelper
 
         #region ctor
 
+        /// <summary>
+        /// Main constructor invoked out of nw-api.
+        /// the paramegter points to the trabslator holding a reference to the LUA Interpreter.
+        /// </summary>
+        /// <param name="translator"></param>
         public NwLuaDebugHelper(ObjectTranslator translator)
         {
             _translator = translator;
@@ -46,6 +73,12 @@ namespace NwLuaDebugHelper
 
         #region Private Methods
 
+        /// <summary>
+        /// Deserializes a JSON object, which was read from the input file.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="input"></param>
+        /// <returns></returns>
         private IEnumerable<T> DeserializeObjects<T>(string input)
         {
             JsonSerializer serializer = new JsonSerializer();
@@ -60,6 +93,10 @@ namespace NwLuaDebugHelper
             }
         }
 
+        /// <summary>
+        /// Analyses the Input line and then invokes the respective LUA Function as set via Callbacks from the parser
+        /// </summary>
+        /// <param name="input"></param>
         private void ProcessDecoderInput(DecoderInput input)
         {
             _currentDecoderInput = input;
@@ -80,11 +117,21 @@ namespace NwLuaDebugHelper
 
         #region Public Methods
 
+        /// <summary>
+        /// NW-API: nw.getPayload()
+        /// Returns a Payload object
+        /// </summary>
+        /// <returns></returns>
         public Payload GetPayload()
         {
             return _payLoad;
         }
 
+        /// <summary>
+        /// Allows setting of the LogLevel and LogFile
+        /// </summary>
+        /// <param name="loglevel"></param>
+        /// <param name="path"></param>
         public void SetLogger(string loglevel, string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -106,6 +153,11 @@ namespace NwLuaDebugHelper
             logger.Info("Set new Logging configuration");
         }
 
+        /// <summary>
+        /// Writes to the log file using the specified Log Level
+        /// </summary>
+        /// <param name="level"></param>
+        /// <param name="message"></param>
         public void WriteLog(string level, string message)
         {
             switch (level)
@@ -125,6 +177,12 @@ namespace NwLuaDebugHelper
             }
         }
 
+        /// <summary>
+        /// NW-API: parser:setCallbacks
+        /// 
+        /// Sets the callbacks as specified in the Parser
+        /// </summary>
+        /// <param name="callBackTable"></param>
         public void setCallbacks(LuaTable callBackTable)
         {
             _callBacks.Clear();
@@ -132,6 +190,7 @@ namespace NwLuaDebugHelper
             {
                 var callBack = new CallBack();
                 callBack.Function = (LuaFunction)element.Value;
+                // Are we looking at Meta Callbacks
                 if (element.Key is LuaTable)
                 {
                     callBack.callBackType = Enums.CallbackType.Meta;
@@ -161,6 +220,7 @@ namespace NwLuaDebugHelper
                 }
                 else
                 {
+                    // Check for specific "nwevents"
                     if (element.Key.ToString() == "Nw.OnInit")
                     {
                         _cbOnInit = callBack.Function;
@@ -198,6 +258,10 @@ namespace NwLuaDebugHelper
             }
         }
 
+        /// <summary>
+        /// The "main" loop, which starts reading the input file and invokes the callbacks based on the json input
+        /// </summary>
+        /// <param name="inputFile"></param>
         public void Process(string inputFile)
         {
             var file = inputFile;
@@ -235,19 +299,52 @@ namespace NwLuaDebugHelper
                 return;
             }
 
-            // First do possible "Begin" Event
-            if (_cbOnSessionBegin != null)
+            // First do possible "Init" and "Start" Events
+            if (_cbOnInit != null)
             {
-                _cbOnSessionBegin.Call();
+                _cbOnInit.Call();
+            }
+            if (_cbOnStart != null)
+            {
+                _cbOnStart.Call();
             }
 
             logger.Info($"Reading instructions from file {file}");
             var i = 0;
             foreach (var input in decoderInput)
             {
+                // Execute the Begin Events
+                if (_cbOnSessionBegin != null)
+                {
+                    _cbOnSessionBegin.Call();
+                }
+                if (_cbOnStreamBegin != null)
+                {
+                    _cbOnStreamBegin.Call();
+                }
+
                 i++;
                 logger.Info($"Processing line {i}");
                 ProcessDecoderInput(input);
+
+                // Execute the Begin Events
+                if (_cbOnStreamEnd != null)
+                {
+                    _cbOnStreamEnd.Call();
+                }
+                if (_cbOnSessionEnd != null)
+                {
+                    _cbOnSessionEnd.Call();
+                }
+            }
+
+            if (_cbOnReset != null)
+            {
+                _cbOnReset.Call();
+            }
+            if (_cbOnStop != null)
+            {
+                _cbOnStop.Call();
             }
         }
 
