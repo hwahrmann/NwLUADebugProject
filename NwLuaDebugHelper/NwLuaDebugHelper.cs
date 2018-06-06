@@ -110,50 +110,48 @@ namespace NwLuaDebugHelper
                     CallBack callback = null;
                     if (_callBacks.TryGetValue(item.Key, out callback))
                     {
-                        logger.Info($"Invoking Meta callback for {item.Key.ToString()}. Value: {item.Value.ToString()}");
+                        logger.Debug($"Invoking Meta callback for {item.Key.ToString()}. Value: {item.Value.ToString()}");
                         callback.Function.Call(item.Value.ToString());
                     }
                 }
             }
 
             // Process Token Callbacks
-            if (input.Token != null)
+            foreach (KeyValuePair<string, CallBack> item in _callBacks)
             {
-                foreach (string token in input.Token)
+                CallBack callback = item.Value;
+                if (callback.callBackType == Enums.CallbackType.Token)
                 {
-                    CallBack callback = null;
-                    if (_callBacks.TryGetValue(token, out callback))
+                    string token = callback.Token;
+                    bool match = false;
+                    int first, last = 0;
+                    if (token.StartsWith("^"))
                     {
-                        bool match = false;
-                        int first, last = 0;
-                        if (token.StartsWith("^"))
+                        match = _payLoad.tostring().StartsWith(token.Substring(1));
+                        first = 1;
+                        last = token.Length - 1;
+                    }
+                    else if (token.EndsWith("$"))
+                    {
+                        match = _payLoad.tostring().EndsWith(token.Substring(0, token.Length - 1));
+                        first = _payLoad.len() - token.Length + 2;
+                        last = _payLoad.len();
+                    }
+                    else
+                    {
+                        first = _payLoad.tostring().IndexOf(token);
+                        if (first > -1)
                         {
-                            match = _payLoad.tostring().StartsWith(token.Substring(1));
-                            first = 1;
-                            last = token.Length;
+                            first = first + 1;
+                            last = first + token.Length - 1;
+                            match = true;
                         }
-                        else if (token.EndsWith("$"))
-                        {
-                            match = _payLoad.tostring().EndsWith(token.Substring(0, token.Length - 1));
-                            first = _payLoad.len() - token.Length;
-                            last = _payLoad.len();
-                        }
-                        else
-                        {
-                            first = _payLoad.tostring().IndexOf(token);
-                            if (first > -1)
-                            {
-                                first = first + 1;
-                                last = first + token.Length;
-                                match = true;
-                            }
-                        }
+                    }
 
-                        if (match)
-                        {
-                            logger.Info($"Invoking Token callback for {token}.");
-                            callback.Function.Call(token, first, last);
-                        }
+                    if (match)
+                    {
+                        logger.Debug($"Invoking Token callback for {token}.");
+                        callback.Function.Call(token, first, last);
                     }
                 }
             }
