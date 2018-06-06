@@ -31,7 +31,7 @@ namespace NwLuaDebugHelper
     {
         public Dictionary<string, string> Meta = new Dictionary<string, string>();
         public string Port;
-        public string Token;
+        public List<string> Token;
         public string Payload;
     }
 }

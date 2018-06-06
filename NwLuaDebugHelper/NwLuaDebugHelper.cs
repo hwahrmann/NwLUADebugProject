@@ -102,13 +102,59 @@ namespace NwLuaDebugHelper
             _currentDecoderInput = input;
             _payLoad = new Payload(input.Payload);
 
-            foreach (KeyValuePair<string, string> item in input.Meta)
+            // Process Meta Callbacks
+            if (input.Meta != null)
             {
-                CallBack callback = null;
-                if (_callBacks.TryGetValue(item.Key, out callback))
+                foreach (KeyValuePair<string, string> item in input.Meta)
                 {
-                    logger.Info($"Invoking Meta callback for {item.Key.ToString()}. Value: {item.Value.ToString()}");
-                    callback.Function.Call(item.Value.ToString());
+                    CallBack callback = null;
+                    if (_callBacks.TryGetValue(item.Key, out callback))
+                    {
+                        logger.Info($"Invoking Meta callback for {item.Key.ToString()}. Value: {item.Value.ToString()}");
+                        callback.Function.Call(item.Value.ToString());
+                    }
+                }
+            }
+
+            // Process Token Callbacks
+            if (input.Token != null)
+            {
+                foreach (string token in input.Token)
+                {
+                    CallBack callback = null;
+                    if (_callBacks.TryGetValue(token, out callback))
+                    {
+                        bool match = false;
+                        int first, last = 0;
+                        if (token.StartsWith("^"))
+                        {
+                            match = _payLoad.tostring().StartsWith(token.Substring(1));
+                            first = 1;
+                            last = token.Length;
+                        }
+                        else if (token.EndsWith("$"))
+                        {
+                            match = _payLoad.tostring().EndsWith(token.Substring(0, token.Length - 1));
+                            first = _payLoad.len() - token.Length;
+                            last = _payLoad.len();
+                        }
+                        else
+                        {
+                            first = _payLoad.tostring().IndexOf(token);
+                            if (first > -1)
+                            {
+                                first = first + 1;
+                                last = first + token.Length;
+                                match = true;
+                            }
+                        }
+
+                        if (match)
+                        {
+                            logger.Info($"Invoking Token callback for {token}.");
+                            callback.Function.Call(token, first, last);
+                        }
+                    }
                 }
             }
         }
@@ -218,7 +264,7 @@ namespace NwLuaDebugHelper
                     logger.Info($"Registering callback for {callBack.Token}");
                     _callBacks.Add(callBack.Token, callBack);
                 }
-                else
+                else if (element.Key.ToString().StartsWith("Nw."))
                 {
                     // Check for specific "nwevents"
                     if (element.Key.ToString() == "Nw.OnInit")
@@ -254,6 +300,13 @@ namespace NwLuaDebugHelper
                         _cbOnStreamEnd = callBack.Function;
                     }
                     logger.Info($"Registering callback for {element.Key.ToString()}");
+                }
+                else
+                {
+                    // Token Match
+                    callBack.callBackType = Enums.CallbackType.Token;
+                    callBack.Token = element.Key.ToString();
+                    _callBacks.Add(callBack.Token, callBack);
                 }
             }
         }
