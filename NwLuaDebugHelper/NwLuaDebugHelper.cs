@@ -191,8 +191,10 @@ namespace NwLuaDebugHelper
 
             var level = LogLevel.FromString(loglevel);
             var config = new NLog.Config.LoggingConfiguration();
-            var logfile = new NLog.Targets.FileTarget() { FileName = path, Name = "logfile" };
+            var logfile = new NLog.Targets.FileTarget() { FileName = path, Name = "logfile", Layout = "${longdate} | ${level:uppercase=true} | ${message}" };
+            var console = new NLog.Targets.ConsoleTarget() { Layout = "${level:uppercase=true} | ${message}" };
             config.LoggingRules.Add(new NLog.Config.LoggingRule("*", level, logfile));
+            config.LoggingRules.Add(new NLog.Config.LoggingRule("*", level, console));
             NLog.LogManager.Configuration = config;
             logger.Info("Set new Logging configuration");
         }
