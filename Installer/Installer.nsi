@@ -42,8 +42,6 @@ SetCompressor /SOLID lzma
 !define MUI_HEADERIMAGE_BITMAP "contrib\Graphics\Header.bmp"
 !define MUI_FINISHPAGE_NOAUTOCLOSE
 !define MUI_FINISHPAGE_TEXT "Please make sure that you set the LUA_PATH and LUA_CPATH in your Eclipse Environment. Instructions are found in the Documentation."
-!define MUI_FINISHPAGE_SHOWREADME_TEXT  "Show Documentation"
-!define MUI_FINISHPAGE_SHOWREADME  "contrib\Readme.txt"
 !define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
 # Included files
