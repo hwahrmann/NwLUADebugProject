@@ -190,13 +190,30 @@ namespace NwLuaDebugHelper
             }
 
             var level = LogLevel.FromString(loglevel);
-            var config = new NLog.Config.LoggingConfiguration();
-            var logfile = new NLog.Targets.FileTarget() { FileName = path, Name = "logfile", Layout = "${longdate} | ${level:uppercase=true} | ${message}" };
-            var console = new NLog.Targets.ConsoleTarget() { Layout = "${level:uppercase=true} | ${message}" };
-            config.LoggingRules.Add(new NLog.Config.LoggingRule("*", level, logfile));
-            config.LoggingRules.Add(new NLog.Config.LoggingRule("*", level, console));
-            NLog.LogManager.Configuration = config;
             logger.Info("Set new Logging configuration");
+            var targets = LogManager.Configuration.AllTargets;
+            var rules = LogManager.Configuration.LoggingRules;
+
+            // First flush the existing log messages
+            LogManager.Flush();
+
+            // Set the Debug Levels
+            foreach (var rule in rules)
+            {
+                rule.SetLoggingLevels(level, LogLevel.Error);
+            }
+
+            // Now change the log file name on the FileTarget
+            foreach (var target in targets)
+            {
+                if (target.GetType() == typeof(NLog.Targets.FileTarget))
+                {
+                    (target as NLog.Targets.FileTarget).FileName = path;
+                }
+            }
+
+            // And reconfigure the logger
+            LogManager.ReconfigExistingLoggers();
         }
 
         /// <summary>
