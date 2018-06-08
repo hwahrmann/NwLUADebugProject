@@ -111,7 +111,7 @@ namespace NwLuaDebugHelper
                     if (_callBacks.TryGetValue(item.Key, out callback))
                     {
                         logger.Debug($"Invoking Meta callback for {item.Key.ToString()}. Value: {item.Value.ToString()}");
-                        callback.Function.Call(item.Value.ToString());
+                        callback.Function.Call(_translator, item.Value.ToString());
                     }
                 }
             }
@@ -151,7 +151,7 @@ namespace NwLuaDebugHelper
                     if (match)
                     {
                         logger.Debug($"Invoking Token callback for {token}.");
-                        callback.Function.Call(token, first, last);
+                        callback.Function.Call(_translator, token, first, last);
                     }
                 }
             }
